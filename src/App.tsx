@@ -5,6 +5,7 @@ import { SettingsProvider } from '@/lib/settings-context';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { WhatsAppFloat } from '@/components/WhatsAppFloat';
+import { ChatWidget } from '@/components/ChatWidget';
 import { HomePage } from '@/pages/HomePage';
 import { BuyPage } from '@/pages/BuyPage';
 import { RentPage } from '@/pages/RentPage';
@@ -53,6 +54,7 @@ function AppContent() {
       </main>
       <Footer />
       <WhatsAppFloat />
+      <ChatWidget />
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Bot, Save, Loader2, AlertCircle, Check, Eye, EyeOff, Power, Sparkles } from 'lucide-react';
+import { Bot, Save, Loader2, AlertCircle, Check, Eye, EyeOff, Power, Sparkles, Settings2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface AIConfig {
-  provider: 'gemini' | 'openai' | 'anthropic';
+  provider: 'gemini' | 'openai' | 'anthropic' | 'custom';
+  custom_provider_name: string;
   key_set: boolean;
   chatbot_enabled: boolean;
   welcome_message: string;
@@ -13,12 +14,14 @@ const PROVIDERS = [
   { value: 'gemini', label: 'Google Gemini' },
   { value: 'openai', label: 'OpenAI' },
   { value: 'anthropic', label: 'Anthropic' },
+  { value: 'custom', label: 'Custom / Other' },
 ] as const;
 
 export function AISettingsManager() {
   const [config, setConfig] = useState<AIConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [provider, setProvider] = useState<string>('gemini');
+  const [customProviderName, setCustomProviderName] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [chatbotEnabled, setChatbotEnabled] = useState(false);
@@ -38,6 +41,7 @@ export function AISettingsManager() {
         const c = rows[0];
         setConfig(c);
         setProvider(c.provider);
+        setCustomProviderName(c.custom_provider_name || '');
         setChatbotEnabled(c.chatbot_enabled);
         setWelcomeMessage(c.welcome_message);
       }
@@ -58,6 +62,7 @@ export function AISettingsManager() {
     try {
       const { error: rpcError } = await supabase.rpc('save_ai_config', {
         p_provider: provider,
+        p_custom_provider_name: customProviderName,
         p_api_key: apiKey,
         p_chatbot_enabled: chatbotEnabled,
         p_welcome_message: welcomeMessage,
@@ -117,7 +122,7 @@ export function AISettingsManager() {
           </div>
 
           <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-forest-400">Provider</label>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {PROVIDERS.map((p) => (
               <button
                 key={p.value}
@@ -130,14 +135,27 @@ export function AISettingsManager() {
                 }`}
               >
                 <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${provider === p.value ? 'bg-gold-400 text-forest-700' : 'bg-cream-100 text-forest-400'}`}>
-                  <Bot className="h-5 w-5" />
+                  {p.value === 'custom' ? <Settings2 className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
                 </div>
-                <div>
-                  <p className={`text-sm font-semibold ${provider === p.value ? 'text-forest-700' : 'text-forest-500'}`}>{p.label}</p>
-                </div>
+                <p className={`text-sm font-semibold ${provider === p.value ? 'text-forest-700' : 'text-forest-500'}`}>{p.label}</p>
               </button>
             ))}
           </div>
+
+          {/* Custom provider name input */}
+          {provider === 'custom' && (
+            <div className="mt-4 animate-fade-in">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-forest-400">Custom Provider Name</label>
+              <input
+                type="text"
+                value={customProviderName}
+                onChange={(e) => setCustomProviderName(e.target.value)}
+                placeholder="e.g. Mistral, Cohere, Local LLM..."
+                className="input-field"
+              />
+              <p className="mt-1.5 text-xs text-forest-300">Enter the name of your AI provider. The chatbot will use an OpenAI-compatible API format.</p>
+            </div>
+          )}
         </div>
 
         {/* API Key */}
