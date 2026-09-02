@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --c-forest-50: 229 240 235;
+  --c-forest-100: 204 225 216;
+  --c-forest-200: 163 198 184;
+  --c-forest-300: 122 170 152;
+  --c-forest-400: 81 143 119;
+  --c-forest-500: 40 115 87;
+  --c-forest-600: 15 61 46;
+  --c-forest-700: 13 51 39;
+  --c-forest-800: 10 41 31;
+  --c-forest-900: 8 31 23;
+
+  --c-cream-50: 252 250 245;
+  --c-cream-100: 245 241 232;
+  --c-cream-200: 231 223 208;
+  --c-cream-300: 212 200 178;
+  --c-cream-400: 184 169 140;
+  --c-cream-500: 148 133 104;
+
+  --c-gold-50: 252 247 234;
+  --c-gold-100: 247 237 210;
+  --c-gold-200: 239 219 170;
+  --c-gold-300: 229 193 119;
+  --c-gold-400: 201 151 61;
+  --c-gold-500: 180 135 54;
+  --c-gold-600: 151 113 45;
+  --c-gold-700: 122 91 37;
+  --c-gold-800: 94 70 28;
+  --c-gold-900: 66 49 20;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-cream-100 text-forest-700 font-sans antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-gold-400 px-6 py-3 text-sm font-semibold text-forest-700 transition-all hover:bg-gold-300 hover:shadow-lg hover:shadow-gold-400/30 active:scale-95;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-forest-600 bg-transparent px-6 py-3 text-sm font-semibold text-forest-600 transition-all hover:bg-forest-600 hover:text-cream-100 active:scale-95;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-forest-600 transition-colors hover:bg-forest-50;
+  }
+  .input-field {
+    @apply w-full rounded-lg border border-cream-300 bg-white px-4 py-2.5 text-sm text-forest-700 placeholder:text-forest-300 transition-colors focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/20;
+  }
+  .select-field {
+    @apply w-full cursor-pointer rounded-lg border border-cream-300 bg-white px-4 py-2.5 text-sm text-forest-700 transition-colors focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/20;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .card-shadow {
+    box-shadow: 0 1px 3px rgba(15, 61, 46, 0.08), 0 8px 24px rgba(15, 61, 46, 0.04);
+  }
+  .card-shadow-hover {
+    box-shadow: 0 4px 12px rgba(15, 61, 46, 0.12), 0 16px 48px rgba(15, 61, 46, 0.08);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
