@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 interface AIConfig {
   provider: 'gemini' | 'openai' | 'anthropic' | 'custom';
   custom_provider_name: string;
+  custom_endpoint: string;
   key_set: boolean;
   chatbot_enabled: boolean;
   welcome_message: string;
@@ -22,6 +23,7 @@ export function AISettingsManager() {
   const [loading, setLoading] = useState(true);
   const [provider, setProvider] = useState<string>('gemini');
   const [customProviderName, setCustomProviderName] = useState('');
+  const [customEndpoint, setCustomEndpoint] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [chatbotEnabled, setChatbotEnabled] = useState(false);
@@ -42,6 +44,7 @@ export function AISettingsManager() {
         setConfig(c);
         setProvider(c.provider);
         setCustomProviderName(c.custom_provider_name || '');
+        setCustomEndpoint(c.custom_endpoint || '');
         setChatbotEnabled(c.chatbot_enabled);
         setWelcomeMessage(c.welcome_message);
       }
@@ -63,6 +66,7 @@ export function AISettingsManager() {
       const { error: rpcError } = await supabase.rpc('save_ai_config', {
         p_provider: provider,
         p_custom_provider_name: customProviderName,
+        p_custom_endpoint: customEndpoint,
         p_api_key: apiKey,
         p_chatbot_enabled: chatbotEnabled,
         p_welcome_message: welcomeMessage,
@@ -142,18 +146,31 @@ export function AISettingsManager() {
             ))}
           </div>
 
-          {/* Custom provider name input */}
+          {/* Custom provider name and endpoint input */}
           {provider === 'custom' && (
-            <div className="mt-4 animate-fade-in">
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-forest-400">Custom Provider Name</label>
-              <input
-                type="text"
-                value={customProviderName}
-                onChange={(e) => setCustomProviderName(e.target.value)}
-                placeholder="e.g. Mistral, Cohere, Local LLM..."
-                className="input-field"
-              />
-              <p className="mt-1.5 text-xs text-forest-300">Enter the name of your AI provider. The chatbot will use an OpenAI-compatible API format.</p>
+            <div className="mt-4 animate-fade-in space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-forest-400">Custom Provider Name</label>
+                <input
+                  type="text"
+                  value={customProviderName}
+                  onChange={(e) => setCustomProviderName(e.target.value)}
+                  placeholder="e.g. Mistral, Cohere, Local LLM..."
+                  className="input-field"
+                />
+                <p className="mt-1.5 text-xs text-forest-300">Enter the name of your AI provider. The chatbot will use an OpenAI-compatible API format.</p>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-forest-400">Custom Endpoint URL</label>
+                <input
+                  type="text"
+                  value={customEndpoint}
+                  onChange={(e) => setCustomEndpoint(e.target.value)}
+                  placeholder="https://api.your-provider.com/v1/chat/completions"
+                  className="input-field font-mono text-sm"
+                />
+                <p className="mt-1.5 text-xs text-forest-300">The full API endpoint URL for your provider's chat completions endpoint.</p>
+              </div>
             </div>
           )}
         </div>

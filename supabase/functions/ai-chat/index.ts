@@ -15,18 +15,10 @@ interface ChatRequest {
   messages: ChatMessage[];
 }
 
-const SYSTEM_PROMPT = `You are a helpful real estate assistant for a Pakistani real estate website. You help visitors find properties, answer questions about real estate, and assist with property inquiries.
-
-IMPORTANT RULES:
-1. You must respond in the SAME language the visitor uses. If they write in Roman Urdu (e.g. "Mujhe ghar chahiye"), respond in Roman Urdu. If they write in English, respond in English. Match their language naturally.
-2. You are ONLY a real estate assistant. If someone asks about topics completely unrelated to real estate (politics, sports, cooking recipes, etc.), politely redirect them: "Main sirf property aur real estate mein madad kar sakta hoon. Kya aap kisi property ke baare mein poochna chahenge?" (or the English equivalent).
-3. When discussing properties, use ONLY the listing data provided to you in the context. Do not make up properties or prices.
-4. Be concise and friendly. Keep responses short — typically 2-4 sentences.
-5. If a visitor shares their phone number or contact information, acknowledge it naturally and let them know someone will contact them. Do NOT say "I will save your number" — just thank them and say the team will reach out.
-6. For general real estate FAQ questions (installment plans, buying process, popular areas, documentation), give helpful general advice about the Pakistani real estate market.`;
+const SYSTEM_PROMPT = `You are AKN AI, a helpful real estate assistant for AKN Estates in Pakistan. Answer in the same language and style the user writes in — Roman Urdu or English, matching their tone. Be friendly, concise, and helpful about pricing, locations, property types, and the installment calculator on the site. Keep responses short and conversational, like a helpful real estate agent texting a client. (Note: real property listings context will be added in a future update — for now, answer generally and don't claim specific property details.)`;
 
 const FALLBACK_MESSAGE =
-  "Filhal masla ho raha hai, WhatsApp pe rabta karein.";
+  "Sorry, I'm having trouble connecting right now. Please try again in a moment.";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -58,6 +50,7 @@ Deno.serve(async (req: Request) => {
     const config = configData as {
       provider: string;
       custom_provider_name: string;
+      custom_endpoint: string;
       api_key: string;
       chatbot_enabled: boolean;
       welcome_message: string;
@@ -80,35 +73,15 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(400, { error: "Invalid request body" });
     }
 
-    // ── Fetch current listings for context ───────────────────
-    const { data: listings } = await supabase
-      .from("listings")
-      .select(
-        "title, description, price, property_type, city, area, size_marla, size_kanal, bedrooms, bathrooms, furnished, purpose, year_built, condition"
-      )
-      .order("created_at", { ascending: false })
-      .limit(50);
-
-    const listingsContext = formatListingsForContext(listings ?? []);
-
-    // ── Build messages for AI API ────────────────────────────
-    const fullSystemPrompt = `${SYSTEM_PROMPT}
-
-Here are the current property listings available on the site. Use this data to answer questions about available properties:
-
-${listingsContext}
-
-When mentioning prices, format them in PKR (e.g. "PKR 1.5 crore" or "PKR 85 lakh"). For rent, mention monthly rent.`;
-
     const aiMessages = [
-      { role: "system", content: fullSystemPrompt },
+      { role: "system", content: SYSTEM_PROMPT },
       ...body.messages,
     ];
 
     // ── Call the AI provider ─────────────────────────────────
     let reply: string;
     try {
-      reply = await callAIProvider(config.provider, config.api_key, aiMessages);
+      reply = await callAIProvider(config, aiMessages);
     } catch {
       return jsonResponse(500, {
         reply: FALLBACK_MESSAGE,
@@ -148,38 +121,7 @@ function jsonResponse(status: number, data: unknown): Response {
   });
 }
 
-function formatListingsForContext(
-  listings: Record<string, unknown>[]
-): string {
-  if (listings.length === 0) {
-    return "No listings are currently available.";
-  }
-
-  return listings
-    .map((l, i) => {
-      const purpose = l.purpose === "rent" ? "For Rent" : "For Sale";
-      const price = formatPKR(Number(l.price));
-      const beds = l.bedrooms ? `${l.bedrooms} bed` : "Studio";
-      const baths = l.bathrooms ? `${l.bathrooms} bath` : "";
-      const size = l.size_marla ? `${l.size_marla} marla` : l.size_kanal ? `${l.size_kanal} kanal` : "";
-      const furnished = l.furnished ? ", furnished" : "";
-      return `${i + 1}. ${l.title} — ${purpose}, ${price}, ${l.property_type} in ${l.area}, ${l.city}. ${beds}${baths ? ", " + baths : ""}${size ? ", " + size : ""}${furnished}. ${l.condition ? l.condition + " condition." : ""} ${l.year_built ? "Built " + l.year_built + "." : ""}`;
-    })
-    .join("\n");
-}
-
-function formatPKR(amount: number): string {
-  if (amount >= 10000000) {
-    return `PKR ${(amount / 10000000).toFixed(amount % 10000000 === 0 ? 0 : 2)} crore`;
-  }
-  if (amount >= 100000) {
-    return `PKR ${(amount / 100000).toFixed(amount % 100000 === 0 ? 0 : 2)} lakh`;
-  }
-  return `PKR ${amount.toLocaleString()}`;
-}
-
 function extractPhone(text: string): string | null {
-  // Pakistani phone patterns: 03XX-XXXXXXX, 03XXXXXXXXX, +92XXXXXXXXXX, 92XXXXXXXXXX
   const patterns = [
     /(?:\+?92|0)?3\d{2}[-\s]?\d{7}/,
     /(?:\+?92|0)3\d{9}/,
@@ -188,7 +130,6 @@ function extractPhone(text: string): string | null {
     const m = text.match(p);
     if (m) return m[0].replace(/[-\s]/g, "");
   }
-  // Generic international: +XX followed by 7-15 digits
   const intl = text.match(/\+\d{7,15}/);
   if (intl) return intl[0];
   return null;
@@ -211,18 +152,25 @@ async function saveLead(
 }
 
 async function callAIProvider(
-  provider: string,
-  apiKey: string,
+  config: {
+    provider: string;
+    custom_provider_name: string;
+    custom_endpoint: string;
+    api_key: string;
+  },
   messages: { role: string; content: string }[]
 ): Promise<string> {
-  if (provider === "gemini") {
-    return callGemini(apiKey, messages);
+  if (config.provider === "gemini") {
+    return callGemini(config.api_key, messages);
   }
-  if (provider === "anthropic") {
-    return callAnthropic(apiKey, messages);
+  if (config.provider === "anthropic") {
+    return callAnthropic(config.api_key, messages);
   }
-  // openai and custom both use OpenAI-compatible API
-  return callOpenAICompatible(apiKey, messages);
+  if (config.provider === "custom") {
+    return callOpenAICompatible(config.api_key, messages, config.custom_endpoint);
+  }
+  // openai
+  return callOpenAICompatible(config.api_key, messages, "https://api.openai.com/v1/chat/completions");
 }
 
 async function callGemini(
@@ -238,7 +186,7 @@ async function callGemini(
   }));
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -254,8 +202,7 @@ async function callGemini(
   );
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini API error: ${err}`);
+    throw new Error(`Gemini API error: ${res.status}`);
   }
 
   const data = await res.json();
@@ -265,9 +212,10 @@ async function callGemini(
 
 async function callOpenAICompatible(
   apiKey: string,
-  messages: { role: string; content: string }[]
+  messages: { role: string; content: string }[],
+  endpoint: string
 ): Promise<string> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -282,8 +230,7 @@ async function callOpenAICompatible(
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OpenAI API error: ${err}`);
+    throw new Error(`API error: ${res.status}`);
   }
 
   const data = await res.json();
@@ -316,8 +263,7 @@ async function callAnthropic(
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Anthropic API error: ${err}`);
+    throw new Error(`Anthropic API error: ${res.status}`);
   }
 
   const data = await res.json();

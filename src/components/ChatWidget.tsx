@@ -62,28 +62,48 @@ export function ChatWidget() {
     }
   }, [messages.length, welcomeMessage]);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || loading) return;
 
     const userMsg: ChatMessage = { role: 'user', content: trimmed };
-    setMessages((prev) => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInput('');
     setLoading(true);
 
-    // Phase B1: simulate a typing delay, then show a placeholder response.
-    // This will be replaced with the real AI edge function call in the next phase.
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+
+      if (!response.ok) throw new Error('Request failed');
+
+      const data = await response.json() as { reply?: string };
+      if (!data.reply) throw new Error('No reply');
+
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: data.reply },
+      ]);
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: 'AI responses are coming soon! This is a placeholder reply while we wire up the AI connection.',
+          content: "Sorry, I'm having trouble connecting right now. Please try again in a moment.",
         },
       ]);
-    }, 1500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Don't render until we've checked config, and only if enabled
