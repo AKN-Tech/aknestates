@@ -95,7 +95,7 @@ export function ChatWidget() {
       {!isOpen && (
         <button
           onClick={handleOpen}
-          className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 hover:shadow-xl"
+          className="fixed bottom-28 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 hover:shadow-xl"
           style={{ backgroundColor: BRAND.darkGreen, color: BRAND.amber }}
           aria-label="Ask AKN AI"
         >
@@ -109,7 +109,7 @@ export function ChatWidget() {
 
       {/* Chat window */}
       {isOpen && (
-        <div className="fixed bottom-5 right-5 z-50 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-scale-in sm:w-80">
+        <div className="fixed bottom-12 right-5 z-50 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-scale-in sm:w-80">
           {/* Header */}
           <div
             className="flex items-center justify-between px-4 py-3"
