@@ -15,7 +15,11 @@ interface ChatRequest {
   messages: ChatMessage[];
 }
 
-const SYSTEM_PROMPT = `You are AKN AI, a helpful real estate assistant for AKN Estates in Pakistan. Answer in the same language and style the user writes in — Roman Urdu or English, matching their tone. Be friendly, concise, and helpful about pricing, locations, property types, and the installment calculator on the site. Keep responses short and conversational, like a helpful real estate agent texting a client. (Note: real property listings context will be added in a future update — for now, answer generally and don't claim specific property details.)`;
+const SYSTEM_PROMPT = `You are AKN AI, a helpful real estate assistant for AKN Estates in Pakistan. Answer in the same language and style the user writes in — Roman Urdu or English, matching their tone. Be friendly, concise, and helpful about pricing, locations, property types, and the installment calculator on the site. Keep responses short and conversational, like a helpful real estate agent texting a client.
+
+You will be given a list of current property listings available on the site. When a visitor asks about properties, use ONLY these listings to answer — mention the actual title, price, location, size, and bedrooms from the listing data. Format prices in PKR (e.g. "PKR 2.5 crore" or "PKR 85 lakh"). For rent listings, mention monthly rent.
+
+If no listings match the visitor's criteria, say so honestly and suggest they check the Buy or Rent pages for the latest updates. Never make up properties or prices that aren't in the provided listings.`;
 
 const FALLBACK_MESSAGE =
   "Sorry, I'm having trouble connecting right now. Please try again in a moment.";
@@ -73,8 +77,25 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(400, { error: "Invalid request body" });
     }
 
+    // ── Fetch current listings for context ───────────────────
+    const { data: listings } = await supabase
+      .from("listings")
+      .select("title, price, property_type, city, area, size_marla, size_kanal, bedrooms, bathrooms, furnished, purpose, year_built, condition")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    const listingsContext = formatListingsForContext(listings ?? []);
+
+    const fullSystemPrompt = `${SYSTEM_PROMPT}
+
+Here are the current property listings available on AKN Estates. Use this data to answer questions about available properties:
+
+${listingsContext}
+
+When mentioning prices, format them in PKR (e.g. "PKR 1.5 crore" or "PKR 85 lakh"). For rent, mention monthly rent.`;
+
     const aiMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: fullSystemPrompt },
       ...body.messages,
     ];
 
@@ -149,6 +170,36 @@ async function saveLead(
   } catch {
     // Silently fail — don't disrupt the chat
   }
+}
+
+function formatListingsForContext(
+  listings: Record<string, unknown>[]
+): string {
+  if (listings.length === 0) {
+    return "No listings are currently available.";
+  }
+
+  return listings
+    .map((l, i) => {
+      const purpose = l.purpose === "rent" ? "For Rent" : "For Sale";
+      const price = formatPKR(Number(l.price));
+      const beds = l.bedrooms ? `${l.bedrooms} bed` : "Studio";
+      const baths = l.bathrooms ? `${l.bathrooms} bath` : "";
+      const size = l.size_marla ? `${l.size_marla} marla` : l.size_kanal ? `${l.size_kanal} kanal` : "";
+      const furnished = l.furnished ? ", furnished" : "";
+      return `${i + 1}. ${l.title} — ${purpose}, ${price}, ${l.property_type} in ${l.area}, ${l.city}. ${beds}${baths ? ", " + baths : ""}${size ? ", " + size : ""}${furnished}. ${l.condition ? l.condition + " condition." : ""} ${l.year_built ? "Built " + l.year_built + "." : ""}`;
+    })
+    .join("\n");
+}
+
+function formatPKR(amount: number): string {
+  if (amount >= 10000000) {
+    return `PKR ${(amount / 10000000).toFixed(amount % 10000000 === 0 ? 0 : 2)} crore`;
+  }
+  if (amount >= 100000) {
+    return `PKR ${(amount / 100000).toFixed(amount % 100000 === 0 ? 0 : 2)} lakh`;
+  }
+  return `PKR ${amount.toLocaleString()}`;
 }
 
 async function callAIProvider(
