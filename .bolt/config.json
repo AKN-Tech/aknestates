@@ -3,9 +3,9 @@
   "skills": {},
   "systemSkills": {
     "browser-testing": true,
-    "seo-geo": true,
+    "seo-geo": false,
     "skill-creator": true,
-    "web-design-guidelines": true,
+    "web-design-guidelines": false,
     "writing-guidelines": false
   }
 }
