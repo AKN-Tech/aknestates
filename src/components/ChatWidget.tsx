@@ -86,7 +86,7 @@ export function ChatWidget() {
 
       if (!response.ok) throw new Error('Request failed');
 
-      const data = await response.json() as { reply?: string };
+      const data = await response.json() as { reply?: string; debug?: string };
       if (!data.reply) throw new Error('No reply');
 
       setMessages((prev) => [
